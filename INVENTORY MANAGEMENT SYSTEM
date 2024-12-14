@@ -1,0 +1,207 @@
+import tkinter as tk
+from tkinter import messagebox
+from tkinter import ttk
+import json
+
+class InventorySystem:
+    def _init_(self):
+        self.products = {}
+        self.load_data()
+
+    def load_data(self):
+        """Load product data from a JSON file."""
+        try:
+            with open("inventory_data.json", "r") as file:
+                self.products = json.load(file)
+        except FileNotFoundError:
+            self.products = {}
+
+    def save_data(self):
+        """Save current product data to a JSON file."""
+        with open("inventory_data.json", "w") as file:
+            json.dump(self.products, file)
+
+    def add_product(self, product_id, name, quantity, price):
+        """Add a new product to the inventory."""
+        if product_id in self.products:
+            return "Product already exists."
+        self.products[product_id] = {
+            "name": name,
+            "quantity": int(quantity),
+            "price": float(price)
+        }
+        self.save_data()
+        return "Product added successfully."
+
+    def edit_product(self, product_id, name, quantity, price):
+        """Edit an existing product in the inventory."""
+        if product_id not in self.products:
+            return "Product not found."
+        self.products[product_id] = {
+            "name": name,
+            "quantity": int(quantity),
+            "price": float(price)
+        }
+        self.save_data()
+        return "Product updated successfully."
+
+    def delete_product(self, product_id):
+        """Delete a product from the inventory."""
+        if product_id not in self.products:
+            return "Product not found."
+        del self.products[product_id]
+        self.save_data()
+        return "Product deleted successfully."
+
+    def get_total_value(self):
+        """Calculate the total value of the inventory in rupees."""
+        total = 0
+        for details in self.products.values():
+            total += details["quantity"] * details["price"]
+        return f"₹ {total:,.2f}"
+
+    def get_product_list(self):
+        """Get a list of all products with their details."""
+        return [(product_id, details["name"], details["quantity"], details["price"]) for product_id, details in self.products.items()]
+
+
+class InventoryGUI:
+    def _init_(self, master, inventory_system):
+        self.master = master
+        self.master.title("Inventory Management System")
+        self.master.geometry("800x500")
+        
+        self.inventory_system = inventory_system
+        
+        # Input Fields
+        self.product_id_label = tk.Label(master, text="Product ID:")
+        self.product_id_label.grid(row=0, column=0, padx=10, pady=10)
+
+        self.product_id_entry = tk.Entry(master)
+        self.product_id_entry.grid(row=0, column=1, padx=10, pady=10)
+
+        self.name_label = tk.Label(master, text="Product Name:")
+        self.name_label.grid(row=1, column=0, padx=10, pady=10)
+
+        self.name_entry = tk.Entry(master)
+        self.name_entry.grid(row=1, column=1, padx=10, pady=10)
+
+        self.quantity_label = tk.Label(master, text="Quantity:")
+        self.quantity_label.grid(row=2, column=0, padx=10, pady=10)
+
+        self.quantity_entry = tk.Entry(master)
+        self.quantity_entry.grid(row=2, column=1, padx=10, pady=10)
+
+        self.price_label = tk.Label(master, text="Price (₹):")
+        self.price_label.grid(row=3, column=0, padx=10, pady=10)
+
+        self.price_entry = tk.Entry(master)
+        self.price_entry.grid(row=3, column=1, padx=10, pady=10)
+
+        # Action Buttons
+        self.add_button = tk.Button(master, text="Add Product", command=self.add_product)
+        self.add_button.grid(row=4, column=0, padx=10, pady=10)
+
+        self.edit_button = tk.Button(master, text="Edit Product", command=self.edit_product)
+        self.edit_button.grid(row=4, column=1, padx=10, pady=10)
+
+        self.delete_button = tk.Button(master, text="Delete Product", command=self.delete_product)
+        self.delete_button.grid(row=4, column=2, padx=10, pady=10)
+
+        # Product List Display
+        self.product_list_frame = tk.Frame(master)
+        self.product_list_frame.grid(row=5, column=0, columnspan=3, padx=10, pady=10)
+
+        self.product_tree = ttk.Treeview(self.product_list_frame, columns=("Product ID", "Name", "Quantity", "Price (₹)"), show="headings")
+        self.product_tree.heading("Product ID", text="Product ID")
+        self.product_tree.heading("Name", text="Name")
+        self.product_tree.heading("Quantity", text="Quantity")
+        self.product_tree.heading("Price (₹)", text="Price (₹)")
+
+        self.product_tree.pack(fill=tk.BOTH, expand=True)
+
+        # Total Value Display
+        self.total_label = tk.Label(master, text="Total Value of Inventory:")
+        self.total_label.grid(row=6, column=0, padx=10, pady=10)
+
+        self.total_value_label = tk.Label(master, text="₹ 0.00")
+        self.total_value_label.grid(row=6, column=1, padx=10, pady=10)
+
+        # Update the product list and total value initially
+        self.update_product_list()
+
+    def add_product(self):
+        """Handle adding a product."""
+        product_id = self.product_id_entry.get()
+        name = self.name_entry.get()
+        quantity = self.quantity_entry.get()
+        price = self.price_entry.get()
+
+        # Validate inputs
+        if not product_id or not name or not quantity or not price:
+            messagebox.showerror("Input Error", "All fields must be filled.")
+            return
+
+        # Add the product to the system
+        result = self.inventory_system.add_product(product_id, name, quantity, price)
+        messagebox.showinfo("Result", result)
+
+        if result == "Product added successfully.":
+            # Reset input fields
+            self.product_id_entry.delete(0, tk.END)
+            self.name_entry.delete(0, tk.END)
+            self.quantity_entry.delete(0, tk.END)
+            self.price_entry.delete(0, tk.END)
+
+            # Update the product list and total value
+            self.update_product_list()
+
+    def edit_product(self):
+        """Handle editing a product."""
+        product_id = self.product_id_entry.get()
+        name = self.name_entry.get()
+        quantity = self.quantity_entry.get()
+        price = self.price_entry.get()
+
+        if not product_id or not name or not quantity or not price:
+            messagebox.showerror("Input Error", "All fields must be filled.")
+            return
+
+        result = self.inventory_system.edit_product(product_id, name, quantity, price)
+        messagebox.showinfo("Result", result)
+
+        if result == "Product updated successfully.":
+            self.update_product_list()
+
+    def delete_product(self):
+        """Handle deleting a product."""
+        product_id = self.product_id_entry.get()
+
+        if not product_id:
+            messagebox.showerror("Input Error", "Product ID is required to delete.")
+            return
+
+        result = self.inventory_system.delete_product(product_id)
+        messagebox.showinfo("Result", result)
+
+        if result == "Product deleted successfully.":
+            self.update_product_list()
+
+    def update_product_list(self):
+        """Update the list of products displayed in the Treeview."""
+        for row in self.product_tree.get_children():
+            self.product_tree.delete(row)
+
+        for product_id, name, quantity, price in self.inventory_system.get_product_list():
+            self.product_tree.insert("", "end", values=(product_id, name, quantity, f"₹ {price:,.2f}"))
+
+        # Update total value
+        total_value = self.inventory_system.get_total_value()
+        self.total_value_label.config(text=total_value)
+
+
+if _name_ == "_main_":
+    root = tk.Tk()
+    inventory_system = InventorySystem()
+    app = InventoryGUI(root, inventory_system)
+    root.mainloop()
